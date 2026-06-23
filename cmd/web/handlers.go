@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -16,6 +17,7 @@ func (app *Application) homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: render home page
+	fmt.Printf("%v\n", groups)
 }
 
 func (app *Application) motionHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +35,20 @@ func (app *Application) motionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// TODO: render motion form
+	fmt.Printf("%v\n", motionWithIssues)
+}
+
+func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+
+	issueIDs := r.Form["issue_ids"]
+
+	w.Header().Set("Content-Disposition", "attachment; filename=output.docx")
+	w.Header().Set("Content-Type",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+	// TODO: generate docx
+	fmt.Printf("%v\n", issueIDs)
 }
 
 func (app *Application) notFound(w http.ResponseWriter, r *http.Request, err error) {

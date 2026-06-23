@@ -2,3 +2,5 @@
 *.test
 .exe
 .DS_STORE
+internal/docx/output/
+tailwindcss

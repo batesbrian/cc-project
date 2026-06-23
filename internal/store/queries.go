@@ -105,7 +105,7 @@ func GetCaseTypesWithMotions(db *sql.DB) ([]CaseTypeWithMotions, error) {
 		SELECT ct.id, ct.slug, ct.name, m.id, m.slug, m.name
 		FROM case_types ct
 		JOIN motions m ON m.case_type_id = ct.id
-		ODER BY ct.name, m.name`)
+		ORDER BY ct.name, m.name`)
 	if err != nil {
 		return nil, err
 	}

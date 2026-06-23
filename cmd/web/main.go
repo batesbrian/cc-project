@@ -32,11 +32,14 @@ func main() {
 		panic(err)
 	}
 
-	app, err := NewApplication(logger, db, *templateRoot)
+	_, err = NewApplication(logger, db, *templateRoot)
 	if err != nil {
 		logger.Error("failed to start app", "error", err)
 		panic(err)
 	}
 
 	logger.Info("starting server", "addr", *addr)
+
+	// err = http.ListenAndServe(*addr, app.routes())
+	// logger.Error("server stopped", "err", err)
 }
