@@ -6,18 +6,281 @@ import (
 	"encoding/xml"
 	"fmt"
 	"io"
-	"path/filepath"
+	"io/fs"
 	"slices"
 	"strings"
 )
 
-// Docx owns the build function
+type Generator struct {
+	Templates fs.FS
+}
+
+func (g *Generator) Build(w io.Writer, docx Docx) error {
+	b := build{fsys: g.Templates, doc: docx}
+	return b.run(w)
+}
+
 type Docx struct {
-	TemplatesDir    string
 	Caption         Caption
 	Issues          []string
 	ChangeFont      bool // INFO: default is Times New Roman, alt is Bookman Old Style
 	ChangeCitations bool // INFO: defulat is italic, alt is underline
+}
+
+type build struct {
+	fsys fs.FS
+	doc  Docx
+}
+
+func (b *build) run(w io.Writer) error {
+	zw := zip.NewWriter(w)
+	defer zw.Close()
+
+	file, err := fs.ReadFile(b.fsys, "caption.docx")
+	if err != nil {
+		return err
+	}
+
+	zr, err := zip.NewReader(bytes.NewReader(file), int64(len(file)))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range zr.File {
+		err = b.writeEntry(zw, f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *build) writeEntry(zw *zip.Writer, f *zip.File) error {
+	fw, err := zw.Create(f.Name)
+	if err != nil {
+		return err
+	}
+
+	fr, err := f.Open()
+	if err != nil {
+		return err
+	}
+	defer fr.Close()
+
+	switch f.Name {
+	case "word/styles.xml":
+		return b.processStyles(fw, fr)
+
+	case "word/document.xml":
+		return b.processDocument(fw, fr)
+
+	default:
+		_, err = io.Copy(fw, fr)
+		return err
+	}
+}
+
+func (b *build) processStyles(w io.Writer, rc io.ReadCloser) error {
+	if !b.doc.ChangeFont {
+		_, err := io.Copy(w, rc)
+		return err
+	}
+
+	d := xml.NewDecoder(rc)
+
+	for {
+		token, err := d.RawToken()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		switch t := token.(type) {
+		case xml.StartElement:
+			tagName := getTagName(t.Name)
+
+			if tagName == "w:rFonts" {
+				for i, attr := range t.Attr {
+					if attr.Value == "Times New Roman" {
+						t.Attr[i].Value = "Bookman Old Style"
+					}
+				}
+			}
+
+			writeStartElement(w, t)
+
+		case xml.EndElement:
+			fmt.Fprintf(w, "</%s>", getTagName(t.Name))
+
+		case xml.CharData:
+			w.Write(t)
+
+		default:
+			var buf bytes.Buffer
+			e := xml.NewEncoder(&buf)
+			e.EncodeToken(t)
+			e.Flush()
+			w.Write(buf.Bytes())
+		}
+	}
+
+	return nil
+}
+
+func (b *build) processDocument(w io.Writer, rc io.ReadCloser) error {
+	d := xml.NewDecoder(rc)
+
+	phValues := map[string]string{
+		"{county}": b.doc.Caption.County,
+		"{party1}": b.doc.Caption.Party1,
+		"{title1}": b.doc.Caption.Title1,
+		"{party2}": b.doc.Caption.Party2,
+		"{title2}": b.doc.Caption.Title2,
+	}
+
+	for {
+		token, err := d.RawToken()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		switch t := token.(type) {
+		case xml.StartElement:
+			name := getTagName(t.Name)
+
+			if name == "w:sectPr" && len(b.doc.Issues) > 0 {
+				for _, issue := range b.doc.Issues {
+					err = b.insertIssue(w, issue)
+					if err != nil {
+						return err
+					}
+				}
+				// TODO: write service here
+			}
+
+			writeStartElement(w, t)
+
+		case xml.EndElement:
+			fmt.Fprintf(w, "</%s>", getTagName(t.Name))
+
+		case xml.CharData:
+			s := string(t)
+			for k, v := range phValues {
+				s = strings.ReplaceAll(s, k, v)
+				t = []byte(s)
+			}
+			encodeAndWrite(w, t)
+
+		default:
+			encodeAndWrite(w, t)
+		}
+	}
+
+	return nil
+}
+
+func (b *build) insertIssue(w io.Writer, issue string) error {
+	file, err := fs.ReadFile(b.fsys, issue)
+	if err != nil {
+		return err
+	}
+
+	zr, err := zip.NewReader(bytes.NewReader(file), int64(len(file)))
+	if err != nil {
+		return err
+	}
+
+	for _, f := range zr.File {
+		err := b.writeIssue(w, f)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (b *build) writeIssue(w io.Writer, f *zip.File) error {
+	if f.Name == "word/document.xml" {
+		fr, err := f.Open()
+		if err != nil {
+			return err
+		}
+		defer fr.Close()
+
+		d := xml.NewDecoder(fr)
+
+		writeMode := false
+
+		targets := []string{"w:p", "w:pPr", "w:i", "w:r", "w:rPr", "w:t"}
+
+		for {
+			token, err := d.RawToken()
+			if err == io.EOF {
+				break
+			}
+			if err != nil {
+				return err
+			}
+
+			switch t := token.(type) {
+			case xml.StartElement:
+				name := getTagName(t.Name)
+
+				if name == "w:sectPr" {
+					writeMode = false
+				}
+
+				if writeMode && slices.Contains(targets, name) {
+					if name == "w:i" && b.doc.ChangeCitations {
+						t.Name.Space = "w"
+						t.Name.Local = "u"
+						t.Attr = []xml.Attr{
+							{
+								Name:  xml.Name{Space: "w", Local: "val"},
+								Value: "single",
+							},
+						}
+					}
+
+					writeStartElement(w, t)
+				}
+
+				if name == "w:body" {
+					writeMode = true
+				}
+
+			case xml.EndElement:
+				name := getTagName(t.Name)
+
+				if writeMode && slices.Contains(targets, name) {
+					if name == "w:i" && b.doc.ChangeCitations {
+						t.Name.Space = "w"
+						t.Name.Local = "u"
+					}
+
+					fmt.Fprintf(w, "</%s>", getTagName(t.Name))
+				}
+
+			case xml.CharData:
+				if writeMode {
+					var buf bytes.Buffer
+					e := xml.NewEncoder(&buf)
+					e.EncodeToken(t)
+					e.Flush()
+					w.Write(buf.Bytes())
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // Caption handles inserting values into caption placeholders
@@ -64,250 +327,4 @@ func encodeAndWrite(w io.Writer, t xml.Token) {
 	e.EncodeToken(t)
 	e.Flush()
 	w.Write(buf.Bytes())
-}
-
-// methods for processing templates based on Docx struct
-func (docx *Docx) writeIssue(w io.Writer, f *zip.File) error {
-	if f.Name == "word/document.xml" {
-		fr, err := f.Open()
-		if err != nil {
-			return err
-		}
-		defer fr.Close()
-
-		d := xml.NewDecoder(fr)
-
-		writeMode := false
-
-		targets := []string{"w:p", "w:pPr", "w:i", "w:r", "w:rPr", "w:t"}
-
-		for {
-			token, err := d.RawToken()
-			if err == io.EOF {
-				break
-			}
-			if err != nil {
-				return err
-			}
-
-			switch t := token.(type) {
-			case xml.StartElement:
-				name := getTagName(t.Name)
-
-				if name == "w:sectPr" {
-					writeMode = false
-				}
-
-				if writeMode && slices.Contains(targets, name) {
-					if name == "w:i" && docx.ChangeCitations {
-						t.Name.Space = "w"
-						t.Name.Local = "u"
-						t.Attr = []xml.Attr{
-							{
-								Name:  xml.Name{Space: "w", Local: "val"},
-								Value: "single",
-							},
-						}
-					}
-
-					writeStartElement(w, t)
-				}
-
-				if name == "w:body" {
-					writeMode = true
-				}
-
-			case xml.EndElement:
-				name := getTagName(t.Name)
-
-				if writeMode && slices.Contains(targets, name) {
-					if name == "w:i" && docx.ChangeCitations {
-						t.Name.Space = "w"
-						t.Name.Local = "u"
-					}
-
-					fmt.Fprintf(w, "</%s>", getTagName(t.Name))
-				}
-
-			case xml.CharData:
-				if writeMode {
-					var buf bytes.Buffer
-					e := xml.NewEncoder(&buf)
-					e.EncodeToken(t)
-					e.Flush()
-					w.Write(buf.Bytes())
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-func (docx *Docx) writeEntry(zw *zip.Writer, f *zip.File) error {
-	fw, err := zw.Create(f.Name)
-	if err != nil {
-		return err
-	}
-
-	fr, err := f.Open()
-	if err != nil {
-		return err
-	}
-	defer fr.Close()
-
-	switch f.Name {
-	case "word/styles.xml":
-		return docx.processStyles(fw, fr)
-
-	case "word/document.xml":
-		return docx.processDocument(fw, fr)
-
-	default:
-		_, err = io.Copy(fw, fr)
-		return err
-	}
-}
-
-func (docx *Docx) processStyles(w io.Writer, r io.Reader) error {
-	if !docx.ChangeFont {
-		_, err := io.Copy(w, r)
-		return err
-	}
-
-	d := xml.NewDecoder(r)
-
-	for {
-		token, err := d.RawToken()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		switch t := token.(type) {
-		case xml.StartElement:
-			tagName := getTagName(t.Name)
-
-			if tagName == "w:rFonts" {
-				for i, attr := range t.Attr {
-					if attr.Value == "Times New Roman" {
-						t.Attr[i].Value = "Bookman Old Style"
-					}
-				}
-			}
-
-			writeStartElement(w, t)
-
-		case xml.EndElement:
-			fmt.Fprintf(w, "</%s>", getTagName(t.Name))
-
-		case xml.CharData:
-			w.Write(t)
-
-		default:
-			var buf bytes.Buffer
-			e := xml.NewEncoder(&buf)
-			e.EncodeToken(t)
-			e.Flush()
-			w.Write(buf.Bytes())
-		}
-	}
-
-	return nil
-}
-
-func (docx *Docx) processDocument(w io.Writer, r io.Reader) error {
-	d := xml.NewDecoder(r)
-
-	phValues := map[string]string{
-		"{county}": docx.Caption.County,
-		"{party1}": docx.Caption.Party1,
-		"{title1}": docx.Caption.Title1,
-		"{party2}": docx.Caption.Party2,
-		"{title2}": docx.Caption.Title2,
-	}
-
-	for {
-		token, err := d.RawToken()
-		if err == io.EOF {
-			break
-		}
-		if err != nil {
-			return err
-		}
-
-		switch t := token.(type) {
-		case xml.StartElement:
-			name := getTagName(t.Name)
-
-			if name == "w:sectPr" && len(docx.Issues) > 0 {
-				for _, issue := range docx.Issues {
-					err = docx.insertIssue(w, issue)
-					if err != nil {
-						return err
-					}
-				}
-				// TODO: write service here
-			}
-
-			writeStartElement(w, t)
-
-		case xml.EndElement:
-			fmt.Fprintf(w, "</%s>", getTagName(t.Name))
-
-		case xml.CharData:
-			s := string(t)
-			for k, v := range phValues {
-				s = strings.ReplaceAll(s, k, v)
-				t = []byte(s)
-			}
-			encodeAndWrite(w, t)
-
-		default:
-			encodeAndWrite(w, t)
-		}
-	}
-
-	return nil
-}
-
-func (docx *Docx) insertIssue(w io.Writer, issue string) error {
-	zr, err := zip.OpenReader(issue)
-	if err != nil {
-		return err
-	}
-	defer zr.Close()
-
-	for _, f := range zr.File {
-		err := docx.writeIssue(w, f)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (docx *Docx) Build(w io.Writer) error {
-	zw := zip.NewWriter(w)
-	defer zw.Close()
-
-	captionPath := filepath.Join(docx.TemplatesDir, "caption.docx")
-
-	rCaption, err := zip.OpenReader(captionPath)
-	if err != nil {
-		return err
-	}
-	defer rCaption.Close()
-
-	for _, f := range rCaption.File {
-		err = docx.writeEntry(zw, f)
-		if err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
