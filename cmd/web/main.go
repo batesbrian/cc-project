@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"log/slog"
+	"net/http"
 	"os"
 
+	"github.com/batesbrian/cc-templates/internal/docx"
 	"github.com/batesbrian/cc-templates/internal/store"
 	"github.com/batesbrian/cc-templates/internal/sync"
 )
@@ -26,13 +28,15 @@ func main() {
 
 	store.InitSchema(db)
 
-	err = sync.SyncTemplates(db, *templateRoot)
+	err = sync.SyncTemplates(db, os.DirFS(*templateRoot))
 	if err != nil {
 		logger.Error("template sync failed", "error", err)
 		panic(err)
 	}
 
-	_, err = NewApplication(logger, db, *templateRoot)
+	gen := docx.Generator{Templates: os.DirFS(*templateRoot)}
+
+	app, err := NewApplication(logger, db, gen)
 	if err != nil {
 		logger.Error("failed to start app", "error", err)
 		panic(err)
@@ -40,6 +44,6 @@ func main() {
 
 	logger.Info("starting server", "addr", *addr)
 
-	// err = http.ListenAndServe(*addr, app.routes())
-	// logger.Error("server stopped", "err", err)
+	err = http.ListenAndServe(*addr, app.routes())
+	logger.Error("server stopped", "err", err)
 }

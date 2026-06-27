@@ -3,19 +3,20 @@ package main
 import (
 	"database/sql"
 	"log/slog"
+
+	"github.com/batesbrian/cc-templates/internal/docx"
 )
 
 type Application struct {
-	Logger       *slog.Logger
-	Store        *sql.DB
-	TemplateRoot string
-	// TODO: HTML?
+	Logger *slog.Logger
+	Store  *sql.DB
+	Gen    docx.Generator
 }
 
-func NewApplication(logger *slog.Logger, db *sql.DB, templateRoot string) (*Application, error) {
+func NewApplication(logger *slog.Logger, db *sql.DB, gen docx.Generator) (*Application, error) {
 	return &Application{
-		Logger:       logger,
-		Store:        db,
-		TemplateRoot: templateRoot,
+		Logger: logger,
+		Store:  db,
+		Gen:    gen,
 	}, nil
 }

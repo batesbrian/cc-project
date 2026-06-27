@@ -16,8 +16,13 @@ func TestDocxBuild(t *testing.T) {
 		Templates: templates,
 	}
 
+	caption, ok := GetCaption("criminal")
+	if !ok {
+		t.Errorf("no caption found for case type: criminal")
+	}
+
 	docx := Docx{
-		Caption:         GetCaption("criminal"),
+		Caption:         caption,
 		Issues:          []string{"facial_sufficiency.docx"},
 		ChangeFont:      true,
 		ChangeCitations: true,

@@ -4,27 +4,25 @@ import (
 	"database/sql"
 	"fmt"
 	"io/fs"
-	"path/filepath"
 	"strings"
 	"time"
 )
 
-func SyncTemplates(db *sql.DB, root string) error {
+func SyncTemplates(db *sql.DB, fsys fs.FS) error {
 	syncToken := time.Now().UTC().Format(time.RFC3339Nano)
 
 	tx, err := db.Begin()
 	if err != nil {
-		return fmt.Errorf("begin sync tx: %w", err)
+		return fmt.Errorf("failed to start sync tx: %w", err)
 	}
 	defer tx.Rollback()
 
-	err = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || filepath.Ext(path) != ".docx" {
+	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() || strings.HasSuffix(path, ".docx") {
 			return err
 		}
 
-		rel, _ := filepath.Rel(root, path)
-		parts := strings.Split(filepath.ToSlash(rel), "/")
+		parts := strings.Split(path, "/")
 		if len(parts) != 3 {
 			return nil
 		}
@@ -33,7 +31,7 @@ func SyncTemplates(db *sql.DB, root string) error {
 		mSlug := parts[1]
 		iSlug := strings.TrimSuffix(parts[2], ".docx")
 
-		return upsertIssue(tx, ctSlug, mSlug, iSlug, rel, syncToken)
+		return upsertIssue(tx, ctSlug, mSlug, iSlug, path, syncToken)
 	})
 	if err != nil {
 		return err

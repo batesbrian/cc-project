@@ -292,8 +292,9 @@ type Caption struct {
 	Title2 string
 }
 
-func GetCaption(caseType string) Caption {
-	return caseTypeCaptions[caseType]
+func GetCaption(caseType string) (Caption, bool) {
+	caption, ok := caseTypeCaptions[caseType]
+	return caption, ok
 }
 
 var caseTypeCaptions = map[string]Caption{
