@@ -5,6 +5,8 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/batesbrian/cc-templates/internal/app"
 	"github.com/batesbrian/cc-templates/internal/docx"
@@ -43,8 +45,15 @@ func main() {
 		panic(err)
 	}
 
-	logger.Info("starting server", "addr", *addr)
+	shutdown := make(chan os.Signal, 1)
+	signal.Notify(shutdown, os.Interrupt, syscall.SIGTERM)
 
-	err = http.ListenAndServe(*addr, app.Routes())
-	logger.Error("server stopped", "err", err)
+	go func() {
+		logger.Info("starting server", "addr", *addr)
+		err = http.ListenAndServe(*addr, app.Routes())
+	}()
+
+	<-shutdown
+
+	logger.Info("shutting down", "err", err)
 }
