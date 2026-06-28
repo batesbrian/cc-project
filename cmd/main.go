@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/batesbrian/cc-templates/internal/app"
 	"github.com/batesbrian/cc-templates/internal/docx"
 	"github.com/batesbrian/cc-templates/internal/store"
 	"github.com/batesbrian/cc-templates/internal/sync"
@@ -36,7 +37,7 @@ func main() {
 
 	gen := docx.Generator{Templates: os.DirFS(*templateRoot)}
 
-	app, err := NewApplication(logger, db, gen)
+	app, err := app.NewApplication(logger, db, gen)
 	if err != nil {
 		logger.Error("failed to start app", "error", err)
 		panic(err)
@@ -44,6 +45,6 @@ func main() {
 
 	logger.Info("starting server", "addr", *addr)
 
-	err = http.ListenAndServe(*addr, app.routes())
+	err = http.ListenAndServe(*addr, app.Routes())
 	logger.Error("server stopped", "err", err)
 }

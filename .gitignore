@@ -4,3 +4,10 @@
 .DS_STORE
 internal/docx/output/
 tailwindcss
+ui/*.go
+static/css/style.css
+*.db-shm
+*.db-wal
+
+tailwindcss
+tmp
