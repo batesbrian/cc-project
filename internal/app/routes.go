@@ -9,5 +9,9 @@ func (app *Application) Routes() http.Handler {
 	mux.HandleFunc("GET /motions", app.motionHandler)
 	mux.HandleFunc("POST /generate", app.generateHandler)
 
+	fileServer := http.FileServer(http.Dir("static"))
+
+	mux.Handle("GET /static/", http.StripPrefix("/static/", fileServer))
+
 	return mux
 }

@@ -1,7 +1,29 @@
 package ui
 
 import "github.com/batesbrian/cc-templates/internal/store"
+import "strconv"
 
-templ Home(groups []store.CaseTypeWithMotions) {
-	<main></main>
+templ home(groups []store.CaseTypeWithMotions) {
+	for _, group := range groups {
+		<div>
+			<h1>{ group.CaseType.Name }</h1>
+			<div>
+				<ul>
+					for _, motion := range group.Motions {
+						<li>
+							<a href={ "/motions?motion_id=" + strconv.FormatInt(motion.ID, 10) }>
+								{ motion.Name }
+							</a>
+						</li>
+					}
+				</ul>
+			</div>
+		</div>
+	}
+}
+
+templ HomePage(groups []store.CaseTypeWithMotions) {
+	@Layout() {
+		@home(groups)
+	}
 }

@@ -1,18 +1,22 @@
 package ui
 
-templ Layout(title string) {
+templ Layout() {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
 			<meta charset="UTF-8"/>
-			<title>{ title }</title>
+			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+			<link rel="stylesheet" href="./static/css/style.css"/>
+			<title>Court Counsel Templates</title>
 		</head>
 		<body
-			class="flex flex-col items-center min-h-screen overflow-x-hidden bg-taupe-400 font-sans
-    text-taupe-900 antialiased dark:bg-taupe-800 dark:text-taupe-50"
+			class="flex flex-col items-center min-h-screen overflow-x-hidden font-sans
+antialiased"
 		>
-			<header class="flex p-4 bg-taupe-200 font-serif dark:bg-taupe-500">Court Counsel Templates</header>
-			{ children... }
+			<header class="flex p-4 font-serif">Court Counsel Templates</header>
+			<main>
+				{ children... }
+			</main>
 		</body>
 	</html>
 }

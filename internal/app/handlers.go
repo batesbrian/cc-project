@@ -11,6 +11,7 @@ import (
 
 	"github.com/batesbrian/cc-templates/internal/docx"
 	"github.com/batesbrian/cc-templates/internal/store"
+	"github.com/batesbrian/cc-templates/ui"
 )
 
 func (app *Application) homeHandler(w http.ResponseWriter, r *http.Request) {
@@ -20,8 +21,7 @@ func (app *Application) homeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: render home page
-	fmt.Printf("%v\n", groups)
+	ui.HomePage(groups).Render(r.Context(), w)
 }
 
 func (app *Application) motionHandler(w http.ResponseWriter, r *http.Request) {
@@ -68,7 +68,7 @@ func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) 
 
 	caption, ok := docx.GetCaption(ctSlug)
 	if !ok {
-		app.badRequest(w, r, fmt.Errorf("no caption for case type: %s\n", ctSlug))
+		app.badRequest(w, r, fmt.Errorf("no caption for case type: %s", ctSlug))
 		return
 	}
 

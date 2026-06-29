@@ -18,7 +18,7 @@ func SyncTemplates(db *sql.DB, fsys fs.FS) error {
 	defer tx.Rollback()
 
 	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || strings.HasSuffix(path, ".docx") {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".docx") {
 			return err
 		}
 
