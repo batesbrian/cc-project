@@ -21,7 +21,10 @@ func (app *Application) homeHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ui.HomePage(groups).Render(r.Context(), w)
+	err = ui.HomePage(groups).Render(r.Context(), w)
+	if err != nil {
+		app.serverError(w, r, err)
+	}
 }
 
 func (app *Application) motionHandler(w http.ResponseWriter, r *http.Request) {
@@ -33,13 +36,29 @@ func (app *Application) motionHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	motionWithIssues, err := store.GetMotionWithIssues(app.Store, id)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		app.notFound(w, r, err)
 		return
 	}
+	if err != nil {
+		app.serverError(w, r, err)
+		return
+	}
 
-	// TODO: render motion form
-	fmt.Printf("%v\n", motionWithIssues)
+	ct, err := store.GetCaseTypeByMotion(app.Store, motionWithIssues.Motion.ID)
+	if errors.Is(err, sql.ErrNoRows) {
+		app.notFound(w, r, err)
+		return
+	}
+	if err != nil {
+		app.badRequest(w, r, err)
+		return
+	}
+
+	err = ui.MotionPage(ct, motionWithIssues).Render(r.Context(), w)
+	if err != nil {
+		app.serverError(w, r, err)
+	}
 }
 
 func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) {
@@ -56,8 +75,8 @@ func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	ctSlug, err := store.GetCaseTypeByMotion(app.Store, motionInt)
-	if err == sql.ErrNoRows {
+	ct, err := store.GetCaseTypeByMotion(app.Store, motionInt)
+	if errors.Is(err, sql.ErrNoRows) {
 		app.notFound(w, r, err)
 		return
 	}
@@ -66,9 +85,9 @@ func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	caption, ok := docx.GetCaption(ctSlug)
+	caption, ok := docx.GetCaption(ct.Slug)
 	if !ok {
-		app.badRequest(w, r, fmt.Errorf("no caption for case type: %s", ctSlug))
+		app.badRequest(w, r, fmt.Errorf("no caption for case type: %s", ct.Slug))
 		return
 	}
 
@@ -121,11 +140,14 @@ func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	_, err = io.Copy(w, &buf)
+	if err != nil {
+		app.serverError(w, r, err)
+	}
+
 	w.Header().Set("Content-Disposition", "attachment; filename=output.docx")
 	w.Header().Set("Content-Type",
 		"application/vnd.openxmlformats-officedocument.wordprocessingml.document")
-
-	io.Copy(w, &buf)
 }
 
 func (app *Application) notFound(w http.ResponseWriter, r *http.Request, err error) {

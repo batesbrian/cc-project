@@ -134,7 +134,7 @@ func (b *build) processDocument(w io.Writer, rc io.ReadCloser) error {
 	d := xml.NewDecoder(rc)
 
 	phValues := map[string]string{
-		"{county}": b.doc.Caption.County,
+		"{county}": strings.ToUpper(b.doc.Caption.County),
 		"{party1}": b.doc.Caption.Party1,
 		"{title1}": b.doc.Caption.Title1,
 		"{party2}": b.doc.Caption.Party2,

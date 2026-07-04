@@ -6,15 +6,11 @@ templ Layout() {
 		<head>
 			<meta charset="UTF-8"/>
 			<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-			<link rel="stylesheet" href="./static/css/style.css"/>
+			<link rel="stylesheet" href="/static/css/style.css"/>
 			<title>Court Counsel Templates</title>
 		</head>
-		<body
-			class="flex flex-col items-center min-h-screen overflow-x-hidden font-sans
-antialiased"
-		>
-			<header class="flex p-4 font-serif">Court Counsel Templates</header>
-			<main>
+		<body class="bg-background">
+			<main class="w-full p-8 overflow-y-auto">
 				{ children... }
 			</main>
 		</body>

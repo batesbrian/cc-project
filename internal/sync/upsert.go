@@ -2,6 +2,7 @@ package sync
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
 )
@@ -35,7 +36,7 @@ func upsertCaseType(tx *sql.Tx, slug string) (int64, error) {
 	if err == nil {
 		return id, nil
 	}
-	if err != sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, err
 	}
 
@@ -61,7 +62,7 @@ func upsertMotion(tx *sql.Tx, ctID int64, mSlug string) (int64, error) {
 	if err == nil {
 		return id, nil
 	}
-	if err != sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return 0, err
 	}
 
@@ -85,7 +86,7 @@ func upsertIssueRow(tx *sql.Tx, mID int64, slug, tPath, syncToken string) error 
 		WHERE motion_id = ? AND slug = ?`,
 		mID, slug,
 	).Scan(&id)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		_, err := tx.Exec(
 			`INSERT INTO issues
 			(motion_id, slug, name, template_path, last_seen)

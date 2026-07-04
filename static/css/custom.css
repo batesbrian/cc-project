@@ -1,1 +1,55 @@
 @import "tailwindcss";
+
+@source "../../ui/*.templ";
+
+@source not "../../daisyui.mjs";
+
+@plugin "../../daisyui.mjs";
+
+:root {
+    --color-primary: #f7f9fb;
+    --color-primary-content: #004ac6;
+    --color-base-100: #f7f9fb;
+    --color-base-200: #eceef0;
+    --color-base-300: #dadada;
+    --color-base-content: #191c1e;
+}
+
+@theme {
+    --color-background: #f7f9fb;
+    --color-primary: #004ac6;
+    --color-highlight-primary: #97c4f0;
+    --color-outline: #c3c6d7;
+    --color-background-light: #eceef0;
+    --color-background-med: #dadada;
+    --color-main-txt: #191c1e;
+    --color-light-txt: #6d6d6d;
+}
+
+@font-face {
+    font-family: "Material Symbols Outlined";
+    font-style: normal;
+    font-weight: 100 700;
+    src: url("/static/fonts/MaterialSymbolsOutlined-VariableFont_FILL\,GRAD\,opsz\,wght.ttf")
+        format("truetype");
+}
+
+.material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 24px; /* Preferred default icon size */
+    line-height: 1;
+    display: inline-block;
+    text-transform: none;
+    letter-spacing: normal;
+    word-wrap: normal;
+    white-space: nowrap;
+    direction: ltr;
+    font-feature-settings: "liga";
+    font-variation-settings:
+        "FILL" 0,
+        "wght" 400,
+        "GRAD" 0,
+        "opsz" 24;
+}

@@ -35,9 +35,26 @@ build: ## compile tailwindcss and templ files and build the project
 	templ generate
 	go build -o ./tmp ./cmd/main.go
 
-.PHONY: watch
-watch: ## build and watch the project with air
-	go build -o ./tmp ./cmd/main.go && air
+.PHONY: live/templ
+live/templ: ## regenerate _templ.go files and reload proxy
+	templ generate --watch --proxy="http://localhost:8080" --open-browser=false
+
+.PHONY: live/server
+live/server: ## rebuild and rerun go server
+	air
+
+.PHONY: live/tailwind
+live/tailwind: ## recompile css input on change
+	./tailwindcss -i ./static/css/custom.css -o ./static/css/style.css --watch
+
+# .PHONY: live/sync-assets
+# live/sync-assets: ## reload proxy browser on css recompile
+# 	air --build.cmd "templ generate --notify-proxy" --build.bin "/usr/bin/true" \
+# 		--build.delay "100" --build.include_dir "static/css" --build.include_ext "css"
+
+.PHONY: dev
+dev: ## launch hot reload dev server for tailwind, templ, and go
+	make -j3 live/tailwind live/server live/templ
 
 .PHONY: templ-generate
 templ-generate:

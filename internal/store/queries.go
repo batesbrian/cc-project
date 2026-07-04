@@ -106,8 +106,11 @@ func GetIssuesByMotion(db *sql.DB, mID int64) ([]Issue, error) {
 
 func GetIssuesByIDs(db *sql.DB, ids []int64) ([]Issue, error) {
 	placeholders := make([]string, len(ids))
-	for i := range placeholders {
+	args := make([]any, len(ids))
+
+	for i, id := range ids {
 		placeholders[i] = "?"
+		args[i] = id
 	}
 
 	query := fmt.Sprintf(`
@@ -118,7 +121,7 @@ func GetIssuesByIDs(db *sql.DB, ids []int64) ([]Issue, error) {
 		ORDER BY sort_order
 	`, strings.Join(placeholders, ","))
 
-	rows, err := db.Query(query, ids)
+	rows, err := db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -197,17 +200,17 @@ func GetMotionWithIssues(db *sql.DB, motionID int64) (MotionWithIssues, error) {
 	return MotionWithIssues{Motion: m, Issues: issues}, nil
 }
 
-func GetCaseTypeByMotion(db *sql.DB, motionID int64) (string, error) {
-	var slug string
+func GetCaseTypeByMotion(db *sql.DB, motionID int64) (CaseType, error) {
+	var ct CaseType
 	row := db.QueryRow(`
-		SELECT ct.slug
+		SELECT ct.id, ct.slug, ct.name
 		FROM motions m 
 		JOIN case_types ct ON ct.id = m.case_type_id
 		WHERE m.id = ?
 	`, motionID)
-	err := row.Scan(&slug)
+	err := row.Scan(&ct.ID, &ct.Slug, &ct.Name)
 	if err != nil {
-		return "", err
+		return CaseType{}, err
 	}
-	return slug, nil
+	return ct, nil
 }

@@ -6,8 +6,11 @@ internal/docx/output/
 tailwindcss
 ui/*.go
 static/css/style.css
+*.db
 *.db-shm
 *.db-wal
+todo*
 
 tailwindcss
-tmp
+daisy*
+tmp/

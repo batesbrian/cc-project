@@ -1,18 +1,48 @@
 package ui
 
 import "github.com/batesbrian/cc-templates/internal/store"
-import "strconv"
+import "fmt"
 
 templ home(groups []store.CaseTypeWithMotions) {
+	<div class="max-w-2xl mx-auto">
+		<div class="mb-10 border-b border-outline pb-6">
+			<h1 class="text-[30px] text-main-txt leading-9 tracking-[-0.02em] font-bold">
+				Court Counsel Templates
+			</h1>
+		</div>
+	</div>
 	for _, group := range groups {
-		<div>
-			<h1>{ group.CaseType.Name }</h1>
-			<div>
-				<ul>
-					for _, motion := range group.Motions {
+		<div
+			class="collapse border border-outline
+            rounded-b-none shadow-sm max-w-2xl mx-auto text-main-txt"
+		>
+			<input type="checkbox"/>
+			<div
+				class="collapse-title px-4 py-3 border-b border-outline
+            bg-background-light rounded-t-md rounded-b-none"
+			>
+				<h2
+					class="text-xs font-semibold tracking-wider
+            text-primary-content uppercase"
+				>{ group.CaseType.Name }</h2>
+			</div>
+			<div class="collapse-content p-0!">
+				<ul class="divide-y divide-outline/50">
+					for _, m := range group.Motions {
 						<li>
-							<a href={ "/motions?motion_id=" + strconv.FormatInt(motion.ID, 10) }>
-								{ motion.Name }
+							<a
+								class="flex items-center justify-between group px-4 py-3
+                        transition-colors text-main-txt hover:bg-highlight-primary/30"
+								href={ templ.URL(fmt.Sprintf("/motions?motion_id=%d", m.ID)) }
+							>
+								<span class="text-sm">
+									{ m.Name }
+								</span>
+								<span
+									class="material-symbols-outlined text-[18px]
+                                    text-outline-variant
+                                    group-hover:text-primary-content group-hover:translate-x-1 transition-all"
+								>chevron_right</span>
 							</a>
 						</li>
 					}

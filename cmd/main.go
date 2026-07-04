@@ -29,7 +29,11 @@ func main() {
 	}
 	defer db.Close()
 
-	store.InitSchema(db)
+	err = store.InitSchema(db)
+	if err != nil {
+		logger.Error("failed to open initialize schema", "error", err)
+		panic(err)
+	}
 
 	err = sync.SyncTemplates(db, os.DirFS(*templateRoot))
 	if err != nil {
