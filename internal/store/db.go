@@ -2,18 +2,9 @@ package store
 
 import (
 	"database/sql"
-	_ "embed"
 
 	_ "modernc.org/sqlite"
 )
-
-//go:embed schema.sql
-var schemaSQL string
-
-func InitSchema(db *sql.DB) error {
-	_, err := db.Exec(schemaSQL)
-	return err
-}
 
 func Open(dsn string) (*sql.DB, error) {
 	connString := dsn + "?_pragma=journal_mode(WAL)" +

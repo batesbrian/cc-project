@@ -11,13 +11,11 @@ type CaseType struct {
 type Motion struct {
 	ID         int64
 	CaseTypeID int64
-	Slug       string
 	Name       string
 }
 
 type Issue struct {
 	ID           int64
-	Slug         string
 	Name         string
 	TemplatePath string
 	SortOrder    int

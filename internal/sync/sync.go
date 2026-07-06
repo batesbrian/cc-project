@@ -6,7 +6,22 @@ import (
 	"io/fs"
 	"strings"
 	"time"
+
+	"github.com/batesbrian/cc-templates/internal/docx"
 )
+
+type caseTypeScan struct {
+	slug    string
+	caption docx.Caption
+	motions []motionScan
+}
+
+type motionScan struct {
+	slug   string
+	issues []issueScan
+}
+
+type issueScan struct{}
 
 func SyncTemplates(db *sql.DB, fsys fs.FS) error {
 	syncToken := time.Now().UTC().Format(time.RFC3339Nano)
@@ -44,3 +59,5 @@ func SyncTemplates(db *sql.DB, fsys fs.FS) error {
 
 	return tx.Commit()
 }
+
+func scan(fsys fs.FS)

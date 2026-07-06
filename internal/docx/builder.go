@@ -286,10 +286,10 @@ func (b *build) writeIssue(w io.Writer, f *zip.File) error {
 // Caption handles inserting values into caption placeholders
 type Caption struct {
 	County string
-	Party1 string
-	Title1 string
-	Party2 string
-	Title2 string
+	Party1 string `json:"party1"`
+	Title1 string `json:"title1"`
+	Party2 string `json:"party2"`
+	Title2 string `json:"title2"`
 }
 
 func GetCaption(caseType string) (Caption, bool) {

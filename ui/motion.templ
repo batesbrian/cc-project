@@ -2,8 +2,9 @@ package ui
 
 import "github.com/batesbrian/cc-templates/internal/store"
 import "strconv"
+import "github.com/batesbrian/cc-templates/internal/options"
 
-templ motion(ct store.CaseType, motion store.MotionWithIssues) {
+templ motion(ct store.CaseType, motion store.MotionWithIssues, opts options.Options) {
 	<div class="max-w-3xl mx-auto">
 		<div>
 			<div class="flex text-sm mb-1 gap-2">
@@ -120,8 +121,8 @@ templ motion(ct store.CaseType, motion store.MotionWithIssues) {
 	</form>
 }
 
-templ MotionPage(ct store.CaseType, m store.MotionWithIssues) {
+templ MotionPage(ct store.CaseType, m store.MotionWithIssues, opts options.Options) {
 	@Layout() {
-		@motion(ct, m)
+		@motion(ct, m, opts)
 	}
 }

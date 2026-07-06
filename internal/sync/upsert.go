@@ -36,7 +36,7 @@ func upsertCaseType(tx *sql.Tx, slug string) (int64, error) {
 	if err == nil {
 		return id, nil
 	}
-	if errors.Is(err, sql.ErrNoRows) {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return 0, err
 	}
 
@@ -62,7 +62,7 @@ func upsertMotion(tx *sql.Tx, ctID int64, mSlug string) (int64, error) {
 	if err == nil {
 		return id, nil
 	}
-	if errors.Is(err, sql.ErrNoRows) {
+	if !errors.Is(err, sql.ErrNoRows) {
 		return 0, err
 	}
 

@@ -29,9 +29,9 @@ func main() {
 	}
 	defer db.Close()
 
-	err = store.InitSchema(db)
+	err = store.Migrate(db)
 	if err != nil {
-		logger.Error("failed to open initialize schema", "error", err)
+		logger.Error("goose migrate error", "error", err)
 		panic(err)
 	}
 
