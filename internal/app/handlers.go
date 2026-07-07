@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/batesbrian/cc-templates/internal/docx"
+	"github.com/batesbrian/cc-templates/internal/options"
 	"github.com/batesbrian/cc-templates/internal/store"
 	"github.com/batesbrian/cc-templates/ui"
 )
@@ -55,7 +56,9 @@ func (app *Application) motionHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = ui.MotionPage(ct, motionWithIssues).Render(r.Context(), w)
+	mv := ui.NewMotionView(ct, motionWithIssues, options.FormOpts)
+
+	err = ui.MotionPage(mv).Render(r.Context(), w)
 	if err != nil {
 		app.serverError(w, r, err)
 	}

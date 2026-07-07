@@ -1,100 +1,25 @@
 package ui
 
-import "github.com/batesbrian/cc-templates/internal/store"
 import "strconv"
-import "github.com/batesbrian/cc-templates/internal/options"
 
-templ motion(ct store.CaseType, motion store.MotionWithIssues, opts options.Options) {
+templ motion(mv MotionView) {
 	<div class="max-w-3xl mx-auto">
 		<div>
 			<div class="flex text-sm mb-1 gap-2">
-				<span>{ ct.Name }</span>
+				<span>{ mv.CaseType.Name }</span>
 			</div>
 			<div class="mb-10 border-b border-outline pb-6">
 				<h1 class="text-[30px] text-main-heading leading-9 tracking-[-0.02em] font-bold">
-					{ motion.Motion.Name }
+					{ mv.Motion.Motion.Name }
 				</h1>
 			</div>
 		</div>
 	</div>
 	<form action="/generate" method="POST">
-		<input type="hidden" name="motion_id" value={ strconv.FormatInt(motion.Motion.ID, 10) }/>
-		<div
-			class="border border-outline rounded-md shadow-sm max-w-3xl mx-auto
-        text-main-txt mb-3"
-		>
-			<div
-				class="px-4 py-1 flex items-center gap-2 border-b border-outline
-            bg-background-light rounded-t-md rounded-b-none"
-			>
-				<h2
-					class="text-xs font-semibold tracking-wider
-                text-primary-content uppercase"
-				>County</h2>
-			</div>
-			<div class="p-4 flex flex-wrap gap-8">
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name="county" value="sarasota" checked class="radio-md"/>
-					<span class="text-sm">Sarasota</span>
-				</label>
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name="county" value="manatee" class="radio-md"/>
-					<span class="text-sm">Manatee</span>
-				</label>
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name="county" value="desoto" class="radio-md"/>
-					<span class="text-sm">DeSoto</span>
-				</label>
-			</div>
-		</div>
-		<div
-			class="border border-outline rounded-md shadow-sm max-w-3xl mx-auto
-        text-main-txt mb-3"
-		>
-			<div
-				class="px-4 py-1 flex items-center gap-2 border-b border-outline
-            bg-background-light rounded-t-md rounded-b-none"
-			>
-				<h2
-					class="text-xs font-semibold tracking-wider
-                text-primary-content uppercase"
-				>Font</h2>
-			</div>
-			<div class="p-4 flex flex-wrap gap-8">
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name="font" value="Times New Roman" checked class="radio-md"/>
-					<span class="text-sm">Times New Roman</span>
-				</label>
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name="font" value="Bookman Old Style" class="radio-md"/>
-					<span class="text-sm">Bookman Old Style</span>
-				</label>
-			</div>
-		</div>
-		<div
-			class="border border-outline rounded-md shadow-sm max-w-3xl mx-auto
-        text-main-txt mb-3"
-		>
-			<div
-				class="px-4 py-1 flex items-center gap-2 border-b border-outline
-            bg-background-light rounded-t-md rounded-b-none"
-			>
-				<h2
-					class="text-xs font-semibold tracking-wider
-                text-primary-content uppercase"
-				>Citations</h2>
-			</div>
-			<div class="p-4 flex flex-wrap gap-8">
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name="citations" value="italic" checked class="radio-md"/>
-					<span class="text-sm">Italic</span>
-				</label>
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name="citations" value="underline" class="radio-md"/>
-					<span class="text-sm">Underline</span>
-				</label>
-			</div>
-		</div>
+		<input type="hidden" name="motion_id" value={ strconv.FormatInt(mv.Motion.Motion.ID, 10) }/>
+		for _, g := range mv.Groups {
+			@radioGroupField(g)
+		}
 		<div
 			class="border border-outline rounded-md shadow-sm max-w-3xl mx-auto
         text-main-txt mb-3"
@@ -109,7 +34,7 @@ templ motion(ct store.CaseType, motion store.MotionWithIssues, opts options.Opti
 				>Issues</h2>
 			</div>
 			<div class="p-4 grid grid-cols-2 gap-1">
-				for _, issue := range motion.Issues {
+				for _, issue := range mv.Motion.Issues {
 					<label class="flex gap-1">
 						<input type="checkbox" class="checkbox" name="issue_ids" value={ strconv.FormatInt(issue.ID, 10) }/>
 						<span>{ issue.Name }</span>
@@ -121,8 +46,33 @@ templ motion(ct store.CaseType, motion store.MotionWithIssues, opts options.Opti
 	</form>
 }
 
-templ MotionPage(ct store.CaseType, m store.MotionWithIssues, opts options.Options) {
+templ radioGroupField(rg RadioGroup) {
+	<div
+		class="border border-outline rounded-md shadow-sm max-w-3xl mx-auto
+        text-main-txt mb-3"
+	>
+		<div
+			class="px-4 py-1 flex items-center gap-2 border-b border-outline
+            bg-background-light rounded-t-md rounded-b-none"
+		>
+			<h2
+				class="text-xs font-semibold tracking-wider
+                text-primary-content uppercase"
+			>{ rg.Title }</h2>
+		</div>
+		<div class="p-4 flex flex-wrap gap-8">
+			for _, opt := range rg.Options {
+				<label class="flex items-center gap-3 cursor-pointer group">
+					<input type="radio" name={ rg.Name } value={ opt.Value } checked?={ opt.Checked } class="radio-md"/>
+					<span class="text-sm">{ opt.Label }</span>
+				</label>
+			}
+		</div>
+	</div>
+}
+
+templ MotionPage(mv MotionView) {
 	@Layout() {
-		@motion(ct, m, opts)
+		@motion(mv)
 	}
 }
