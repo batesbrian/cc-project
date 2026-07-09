@@ -1,0 +1,44 @@
+package ui
+
+templ Folder(tab, heading, text string) {
+	@Layout() {
+		<div class="w-full max-w-container-max relative">
+			<div class="flex">
+				<div
+					class="folder-tab bg-tab px-14 py-3 text-menu-accent font-mono
+            rounded-t-lg w-fit"
+				>
+					<a
+						href="/"
+						class="text-menu-accent font-mono cursor-pointer
+                    hover:underline"
+					>
+						Home
+					</a>
+				</div>
+				if tab != "" {
+					<div
+						class="folder-tab bg-tab px-14 py-3 text-menu-accent font-mono
+                        rounded-t-lg w-fit -ml-6"
+					>
+						{ tab }
+					</div>
+				}
+			</div>
+			<div
+				class="bg-menu-main folder-shadow rounded-b-xl rounded-tr-xl
+                rounded-tl-sm flex
+            flex-col"
+			>
+				<header class="pt-10 pb-8 px-10">
+					<h1
+						class="font-source-serif text-4xl font-bold mb-2
+                    text-menu-dark"
+					>{ heading }</h1>
+					<p class="italic text-menu-accent">{ text }</p>
+				</header>
+				{ children... }
+			</div>
+		</div>
+	}
+}

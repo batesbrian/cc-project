@@ -6,22 +6,34 @@ import (
 	"io/fs"
 	"strings"
 	"time"
-
-	"github.com/batesbrian/cc-templates/internal/docx"
 )
 
-type caseTypeScan struct {
-	slug    string
-	caption docx.Caption
-	motions []motionScan
+type iPath struct {
+	ct   string
+	m    string
+	g    string
+	i    string
+	path string
 }
 
-type motionScan struct {
-	slug   string
-	issues []issueScan
-}
+func parseIssuePath(path string) (iPath, bool) {
+	if !strings.HasSuffix(path, ".docx") {
+		return iPath{}, false
+	}
 
-type issueScan struct{}
+	parts := strings.Split(path, "/")
+	if len(parts) != 4 {
+		return iPath{}, false
+	}
+
+	return iPath{
+		ct:   parts[0],
+		m:    parts[1],
+		g:    parts[2],
+		i:    strings.TrimSuffix(parts[3], ".docx"),
+		path: path,
+	}, true
+}
 
 func SyncTemplates(db *sql.DB, fsys fs.FS) error {
 	syncToken := time.Now().UTC().Format(time.RFC3339Nano)
@@ -33,20 +45,19 @@ func SyncTemplates(db *sql.DB, fsys fs.FS) error {
 	defer tx.Rollback()
 
 	err = fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".docx") {
+		if err != nil {
 			return err
 		}
-
-		parts := strings.Split(path, "/")
-		if len(parts) != 3 {
+		if d.IsDir() {
 			return nil
 		}
 
-		ctSlug := parts[0]
-		mSlug := parts[1]
-		iSlug := strings.TrimSuffix(parts[2], ".docx")
+		ip, ok := parseIssuePath(path)
+		if !ok {
+			return nil
+		}
 
-		return upsertIssue(tx, ctSlug, mSlug, iSlug, path, syncToken)
+		return upsertIssue(tx, ip, syncToken)
 	})
 	if err != nil {
 		return err
@@ -59,5 +70,3 @@ func SyncTemplates(db *sql.DB, fsys fs.FS) error {
 
 	return tx.Commit()
 }
-
-func scan(fsys fs.FS)

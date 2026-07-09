@@ -3,57 +3,39 @@ package ui
 import "github.com/batesbrian/cc-templates/internal/store"
 import "fmt"
 
-templ home(groups []store.CaseTypeWithMotions) {
-	<div class="max-w-2xl mx-auto">
-		<div class="mb-10 border-b border-outline pb-6">
-			<h1 class="text-[30px] text-main-txt leading-9 tracking-[-0.02em] font-bold">
-				Court Counsel Templates
-			</h1>
-		</div>
-	</div>
-	for _, group := range groups {
-		<div
-			class="collapse border border-outline
-            rounded-b-none shadow-sm max-w-2xl mx-auto text-main-txt"
-		>
-			<input type="checkbox"/>
-			<div
-				class="collapse-title px-4 py-3 border-b border-outline
-            bg-background-light rounded-t-md rounded-b-none"
-			>
-				<h2
-					class="text-xs font-semibold tracking-wider
-            text-primary-content uppercase"
-				>{ group.CaseType.Name }</h2>
-			</div>
-			<div class="collapse-content p-0!">
-				<ul class="divide-y divide-outline/50">
-					for _, m := range group.Motions {
-						<li>
+templ HomePage(groups []store.CTMotions) {
+	@Folder("", "Court Counsel Templates", "Select an assignment type") {
+		<div class="p-10 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+			for _, ct := range groups {
+				<section class="flex flex-col gap-4">
+					<div
+						class="flex items-center gap-2 pb-2 border-b-2
+            border-menu-accent/20"
+					>
+						<h2 class="font-source-serif font-medium text-menu-dark text-2xl">{ ct.CaseType.Name }</h2>
+					</div>
+					<nav class="flex flex-col space-y-1">
+						for _, m := range ct.Motions {
 							<a
-								class="flex items-center justify-between group px-4 py-3
-                        transition-colors text-main-txt hover:bg-highlight-primary/30"
 								href={ templ.URL(fmt.Sprintf("/motions?motion_id=%d", m.ID)) }
+								class=" group flex items-center justify-between p-3 rounded bg-menu-highlight/5
+                hover:bg-menu-highlight/10 transition-colors"
 							>
-								<span class="text-sm">
-									{ m.Name }
-								</span>
 								<span
-									class="material-symbols-outlined text-[18px]
-                                    text-outline-variant
-                                    group-hover:text-primary-content group-hover:translate-x-1 transition-all"
-								>chevron_right</span>
+									class="text-menu-accent font-source-serif
+                                text-menu-item font-medium"
+								>{ m.Name }</span>
+								<span
+									class="material-symbols-outlined text-sm
+                                    text-menu-dark
+                                opacity-0 group-hover:opacity-100
+                                transition-opacity"
+								>arrow_forward</span>
 							</a>
-						</li>
-					}
-				</ul>
-			</div>
+						}
+					</nav>
+				</section>
+			}
 		</div>
-	}
-}
-
-templ HomePage(groups []store.CaseTypeWithMotions) {
-	@Layout() {
-		@home(groups)
 	}
 }

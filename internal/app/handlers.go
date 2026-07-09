@@ -16,15 +16,17 @@ import (
 )
 
 func (app *Application) homeHandler(w http.ResponseWriter, r *http.Request) {
-	groups, err := store.GetCaseTypesWithMotions(app.Store)
+	ctMotions, err := store.GetCaseTypesWithMotions(app.Store)
 	if err != nil {
 		app.serverError(w, r, err)
+		app.Logger.Error("error getting home page data from db", "error", err)
 		return
 	}
 
-	err = ui.HomePage(groups).Render(r.Context(), w)
+	err = ui.HomePage(ctMotions).Render(r.Context(), w)
 	if err != nil {
 		app.serverError(w, r, err)
+		app.Logger.Error("error rendering home page", "error", err)
 	}
 }
 
@@ -33,34 +35,40 @@ func (app *Application) motionHandler(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(motionID, 10, 64)
 	if err != nil {
 		app.badRequest(w, r, err)
+		app.Logger.Debug("couldn't parse motion id to int", "id", motionID)
 		return
 	}
 
-	motionWithIssues, err := store.GetMotionWithIssues(app.Store, id)
+	mGroups, err := store.GetMGroups(app.Store, id)
 	if errors.Is(err, sql.ErrNoRows) {
 		app.notFound(w, r, err)
+		app.Logger.Debug("no motion groups results found", "motion id", id)
 		return
 	}
 	if err != nil {
 		app.serverError(w, r, err)
+		app.Logger.Error("error getting motion groups", "motion id", id)
 		return
 	}
 
-	ct, err := store.GetCaseTypeByMotion(app.Store, motionWithIssues.Motion.ID)
+	ct, err := store.GetCaseTypeByMotion(app.Store, mGroups.Motion.ID)
 	if errors.Is(err, sql.ErrNoRows) {
 		app.notFound(w, r, err)
+		app.Logger.Debug("no case type results found", "motion id", mGroups.Motion.ID)
 		return
 	}
 	if err != nil {
-		app.badRequest(w, r, err)
+		app.serverError(w, r, err)
+		app.Logger.Error("error getting case type", "motion id", mGroups.Motion.ID)
 		return
 	}
 
-	mv := ui.NewMotionView(ct, motionWithIssues, options.FormOpts)
+	mv := ui.NewMotionView(ct, mGroups, options.FormOpts)
 
 	err = ui.MotionPage(mv).Render(r.Context(), w)
 	if err != nil {
 		app.serverError(w, r, err)
+		app.Logger.Error("error rendering motion page", "motion id", mGroups.Motion.ID)
 	}
 }
 
@@ -95,7 +103,12 @@ func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) 
 	}
 
 	county := r.FormValue("county")
-	caption.County = county
+	countyCap, ok := options.FormOpts.Counties.Resolve(county)
+	if !ok {
+		app.badRequest(w, r, errors.New("bad County value"))
+		return
+	}
+	caption.County = countyCap.Name
 
 	stringIDs := r.Form["issue_ids"]
 	if len(stringIDs) == 0 {
@@ -125,8 +138,8 @@ func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) 
 		paths = append(paths, iss.TemplatePath)
 	}
 
-	changeFont := r.FormValue("font") == "Bookman Old Style"
-	changeCitations := r.FormValue("citations") == "underline"
+	changeFont := r.FormValue("font") == "bookman"
+	changeCitations := r.FormValue("citations") == "u"
 
 	doc := docx.Docx{
 		Caption:         caption,
@@ -143,14 +156,14 @@ func (app *Application) generateHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	w.Header().Set("Content-Disposition", "attachment; filename=output.docx")
+	w.Header().Set("Content-Type",
+		"application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
 	_, err = io.Copy(w, &buf)
 	if err != nil {
 		app.serverError(w, r, err)
 	}
-
-	w.Header().Set("Content-Disposition", "attachment; filename=output.docx")
-	w.Header().Set("Content-Type",
-		"application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 }
 
 func (app *Application) notFound(w http.ResponseWriter, r *http.Request, err error) {

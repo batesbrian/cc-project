@@ -2,28 +2,46 @@
 
 @source "../../ui/*.templ";
 
-@source not "../../daisyui.mjs";
-
-@plugin "../../daisyui.mjs";
-
-:root {
-    --color-primary: #f7f9fb;
-    --color-primary-content: #004ac6;
-    --color-base-100: #f7f9fb;
-    --color-base-200: #eceef0;
-    --color-base-300: #dadada;
-    --color-base-content: #191c1e;
-}
-
 @theme {
-    --color-background: #f7f9fb;
-    --color-primary: #004ac6;
-    --color-highlight-primary: #97c4f0;
-    --color-outline: #c3c6d7;
+    /* --color-page: #e6d5b8; */
+    --color-page: #1f2937;
+    --color-menu-main: #f5deb3;
+    --color-menu-highlight: #60603e;
+    --color-menu-light: #f5f5dc;
+    --color-menu-accent: #745853;
+    --color-tab: #dac49b;
+    --color-menu-dark: #2b1d0c;
     --color-background-light: #eceef0;
     --color-background-med: #dadada;
-    --color-main-txt: #191c1e;
+    --color-main-txt: #1e1b13;
     --color-light-txt: #6d6d6d;
+
+    --text-menu-item: 1rem;
+
+    --font-source-serif: "Source Serif 4", serif;
+
+    --spacing-container-max: 960px;
+}
+
+@utility folder-tab {
+    --tabGirth: 20px;
+
+    clip-path: shape(
+        from bottom left,
+        curve to var(--tabGirth) calc(100% - var(--tabGirth)) with
+            var(--tabGirth) 100%,
+        vline to var(--tabGirth),
+        curve to calc(var(--tabGirth) * 2) 0 with var(--tabGirth) 0,
+        hline to calc(100% - calc(var(--tabGirth) * 2)),
+        curve to calc(100% - var(--tabGirth)) var(--tabGirth) with
+            calc(100% - var(--tabGirth)) 0,
+        vline to calc(100% - var(--tabGirth)),
+        curve to 100% 100% with calc(100% - var(--tabGirth)) 100%
+    );
+}
+
+@utility folder-shadow {
+    box-shadow: 0px 4px 20px rgba(62, 39, 35, 0.08);
 }
 
 @font-face {
@@ -31,6 +49,14 @@
     font-style: normal;
     font-weight: 100 700;
     src: url("/static/fonts/MaterialSymbolsOutlined-VariableFont_FILL\,GRAD\,opsz\,wght.ttf")
+        format("truetype");
+}
+
+@font-face {
+    font-family: "Source Serif 4";
+    font-style: normal;
+    font-weight: 100 700;
+    src: url("/static/fonts/SourceSerif4-VariableFont_opsz\,wght.ttf")
         format("truetype");
 }
 

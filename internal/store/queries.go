@@ -6,31 +6,31 @@ import (
 	"strings"
 )
 
-func GetCaseTypes(db *sql.DB) ([]CaseType, error) {
-	rows, err := db.Query(`SELECT id, slug, name FROM case_types`)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var caseTypes []CaseType
-
-	for rows.Next() {
-		var ct CaseType
-
-		err := rows.Scan(&ct.ID, &ct.Slug, &ct.Name)
-		if err != nil {
-			return nil, err
-		}
-		caseTypes = append(caseTypes, ct)
-	}
-
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return caseTypes, nil
-}
+// func GetCaseTypes(db *sql.DB) ([]CaseType, error) {
+// 	rows, err := db.Query(`SELECT id, slug, name FROM case_types`)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+//
+// 	var caseTypes []CaseType
+//
+// 	for rows.Next() {
+// 		var ct CaseType
+//
+// 		err := rows.Scan(&ct.ID, &ct.Slug, &ct.Name)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		caseTypes = append(caseTypes, ct)
+// 	}
+//
+// 	if err = rows.Err(); err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return caseTypes, nil
+// }
 
 func GetMotion(db *sql.DB, mID int64) (Motion, error) {
 	var m Motion
@@ -42,43 +42,88 @@ func GetMotion(db *sql.DB, mID int64) (Motion, error) {
 	return m, err
 }
 
-func GetMotionsByCaseType(db *sql.DB, ctID int64) ([]Motion, error) {
-	rows, err := db.Query(
-		`SELECT id, name FROM motions
-		WHERE case_type_id = ?`,
-		ctID,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
+func GetMGroups(db *sql.DB, mID int64) (MGroups, error) {
+	var mg MGroups
 
-	var motions []Motion
+	m, err := GetMotion(db, mID)
+	if err != nil {
+		return mg, err
+	}
+
+	mg.Motion = m
+
+	rows, err := db.Query(`
+		SELECT id, motion_id, slug, name	
+		FROM groups WHERE motion_id = ?`,
+		mID)
+	if err != nil {
+		return mg, err
+	}
+
+	var iGroups []IGroup
 
 	for rows.Next() {
-		var m Motion
-
-		err := rows.Scan(&m.ID, &m.Name)
-		if err != nil {
-			return nil, err
+		var g IGroup
+		if err := rows.Scan(&g.ID, &g.MotionID, &g.Slug, &g.Name); err != nil {
+			rows.Close()
+			return mg, err
 		}
-		motions = append(motions, m)
+		iGroups = append(iGroups, g)
+	}
+	if err := rows.Err(); err != nil {
+		rows.Close()
+		return mg, err
+	}
+	rows.Close()
+
+	for _, g := range iGroups {
+		issues, err := GetIssuesByGroup(db, g.ID)
+		if err != nil {
+			return mg, err
+		}
+		mg.Groups = append(mg.Groups, GIssues{Group: g, Issues: issues})
 	}
 
-	if err = rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return motions, nil
+	return mg, nil
 }
 
-func GetIssuesByMotion(db *sql.DB, mID int64) ([]Issue, error) {
+// func GetMotionsByCaseType(db *sql.DB, ctID int64) ([]Motion, error) {
+// 	rows, err := db.Query(
+// 		`SELECT id, name FROM motions
+// 		WHERE case_type_id = ?`,
+// 		ctID,
+// 	)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	defer rows.Close()
+//
+// 	var motions []Motion
+//
+// 	for rows.Next() {
+// 		var m Motion
+//
+// 		err := rows.Scan(&m.ID, &m.Name)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		motions = append(motions, m)
+// 	}
+//
+// 	if err = rows.Err(); err != nil {
+// 		return nil, err
+// 	}
+//
+// 	return motions, nil
+// }
+
+func GetIssuesByGroup(db *sql.DB, gID int64) ([]Issue, error) {
 	rows, err := db.Query(
 		`SELECT id, name, template_path
 		FROM issues 
-		WHERE motion_id = ? AND active = 1
+		WHERE group_id = ? AND active = 1
 		ORDER BY sort_order, name`,
-		mID,
+		gID,
 	)
 	if err != nil {
 		return nil, err
@@ -147,7 +192,7 @@ func GetIssuesByIDs(db *sql.DB, ids []int64) ([]Issue, error) {
 	return issues, nil
 }
 
-func GetCaseTypesWithMotions(db *sql.DB) ([]CaseTypeWithMotions, error) {
+func GetCaseTypesWithMotions(db *sql.DB) ([]CTMotions, error) {
 	rows, err := db.Query(`
 		SELECT ct.id, ct.slug, ct.name, m.id, m.name
 		FROM case_types ct
@@ -158,7 +203,7 @@ func GetCaseTypesWithMotions(db *sql.DB) ([]CaseTypeWithMotions, error) {
 	}
 	defer rows.Close()
 
-	var groups []CaseTypeWithMotions
+	var groups []CTMotions
 
 	for rows.Next() {
 		var ct CaseType
@@ -172,7 +217,7 @@ func GetCaseTypesWithMotions(db *sql.DB) ([]CaseTypeWithMotions, error) {
 		n := len(groups)
 
 		if n == 0 || groups[n-1].CaseType.ID != ct.ID {
-			groups = append(groups, CaseTypeWithMotions{CaseType: ct})
+			groups = append(groups, CTMotions{CaseType: ct})
 			n++
 		}
 
@@ -184,20 +229,6 @@ func GetCaseTypesWithMotions(db *sql.DB) ([]CaseTypeWithMotions, error) {
 	}
 
 	return groups, nil
-}
-
-func GetMotionWithIssues(db *sql.DB, motionID int64) (MotionWithIssues, error) {
-	m, err := GetMotion(db, motionID)
-	if err != nil {
-		return MotionWithIssues{}, err
-	}
-
-	issues, err := GetIssuesByMotion(db, motionID)
-	if err != nil {
-		return MotionWithIssues{}, err
-	}
-
-	return MotionWithIssues{Motion: m, Issues: issues}, nil
 }
 
 func GetCaseTypeByMotion(db *sql.DB, motionID int64) (CaseType, error) {

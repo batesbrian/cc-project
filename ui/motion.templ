@@ -1,78 +1,97 @@
 package ui
 
-import "strconv"
-
-templ motion(mv MotionView) {
-	<div class="max-w-3xl mx-auto">
-		<div>
-			<div class="flex text-sm mb-1 gap-2">
-				<span>{ mv.CaseType.Name }</span>
-			</div>
-			<div class="mb-10 border-b border-outline pb-6">
-				<h1 class="text-[30px] text-main-heading leading-9 tracking-[-0.02em] font-bold">
-					{ mv.Motion.Motion.Name }
-				</h1>
-			</div>
-		</div>
-	</div>
-	<form action="/generate" method="POST">
-		<input type="hidden" name="motion_id" value={ strconv.FormatInt(mv.Motion.Motion.ID, 10) }/>
-		for _, g := range mv.Groups {
-			@radioGroupField(g)
-		}
-		<div
-			class="border border-outline rounded-md shadow-sm max-w-3xl mx-auto
-        text-main-txt mb-3"
-		>
-			<div
-				class="px-4 py-1 flex items-center gap-2 border-b border-outline
-            bg-background-light rounded-t-md rounded-b-none"
-			>
-				<h2
-					class="text-xs font-semibold tracking-wider
-                text-primary-content uppercase"
-				>Issues</h2>
-			</div>
-			<div class="p-4 grid grid-cols-2 gap-1">
-				for _, issue := range mv.Motion.Issues {
-					<label class="flex gap-1">
-						<input type="checkbox" class="checkbox" name="issue_ids" value={ strconv.FormatInt(issue.ID, 10) }/>
-						<span>{ issue.Name }</span>
-					</label>
-				}
-			</div>
-		</div>
-		<button type="submit">Generate Template</button>
-	</form>
-}
+import "fmt"
+import "github.com/batesbrian/cc-templates/internal/store"
 
 templ radioGroupField(rg RadioGroup) {
-	<div
-		class="border border-outline rounded-md shadow-sm max-w-3xl mx-auto
-        text-main-txt mb-3"
-	>
-		<div
-			class="px-4 py-1 flex items-center gap-2 border-b border-outline
-            bg-background-light rounded-t-md rounded-b-none"
-		>
-			<h2
-				class="text-xs font-semibold tracking-wider
-                text-primary-content uppercase"
-			>{ rg.Title }</h2>
-		</div>
-		<div class="p-4 flex flex-wrap gap-8">
-			for _, opt := range rg.Options {
-				<label class="flex items-center gap-3 cursor-pointer group">
-					<input type="radio" name={ rg.Name } value={ opt.Value } checked?={ opt.Checked } class="radio-md"/>
-					<span class="text-sm">{ opt.Label }</span>
+	<fieldset class="space-y-4">
+		<legend
+			class="font-source-serif font-bold text-xs
+                        uppercase tracking-widest text-menu-dark mb-2"
+		>{ rg.Title }</legend>
+		<div class="space-y-2">
+			for _, o := range rg.Options {
+				<label
+					class="flex items-center gap-3
+                                cursor-pointer group transition-transform
+                                hover:translate-x-1"
+				>
+					<input
+						type="radio"
+						name={ rg.Name }
+						value={ o.Value }
+						checked?={ o.Checked }
+						class="w-4 h-4 accent-menu-accent border-black/20"
+					/>
+					<span class="text-sm">{ o.Label }</span>
 				</label>
 			}
 		</div>
-	</div>
+	</fieldset>
+}
+
+templ checkboxGroup(ig store.GIssues) {
+	<fieldset class="break-inside-avoid mb-8">
+		<legend
+			class="font-source-serif font-bold text-sm
+                        text-menu-dark mb-4"
+		>
+			{ ig.Group.Name }
+		</legend>
+		<div class="space-y-3">
+			for _, i := range ig.Issues {
+				<label
+					class="flex items-center gap-3
+                                    cursor-pointer group"
+				>
+					<input
+						class="w-4 h-4 rounded
+                                        accent-menu-accent border-black/20"
+						type="checkbox"
+						name="issue_ids"
+						value={ fmt.Sprintf("%d", i.ID) }
+					/>
+					<span class="text-sm text-menu-dark/80">{ i.Name }</span>
+				</label>
+			}
+		</div>
+	</fieldset>
 }
 
 templ MotionPage(mv MotionView) {
-	@Layout() {
-		@motion(mv)
+	@Folder(mv.CaseType.Name, mv.Motion.Motion.Name, "Select preferences and issues") {
+		<form action="/generate" method="POST" class="space-y-12 px-10">
+			<input type="hidden" name="motion_id" value={ fmt.Sprintf("%d", mv.Motion.Motion.ID) }/>
+			<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+				for _, rg := range mv.Groups {
+					@radioGroupField(rg)
+				}
+			</div>
+			<div
+				class="md:columns-3 gap-8 p-8 rounded-lg border border-black/10
+            bg-menu-light shadow-inner"
+			>
+				for _, ig := range mv.Motion.Groups {
+					@checkboxGroup(ig)
+				}
+			</div>
+			<div
+				class="flex flex-col md:flex-row items-center justify-between
+            gap-6 pt-8 pb-10 border-t border-black/10"
+			>
+				<div class="flex items-center gap-4 text-menu-dark/60">
+					<!-- Potential text here -->
+				</div>
+				<div class="flex gap-4 w-full md:w-auto">
+					<button
+						type="submit"
+						class="flex-1 md:flex-none px-10 py-3
+                    bg-page text-white font-source-serif font-bold text-sm
+                    rounded shadow-lg hover:brightness-90 transition-all
+                    uppercase tracking-wider"
+					>Generate Template</button>
+				</div>
+			</div>
+		</form>
 	}
 }

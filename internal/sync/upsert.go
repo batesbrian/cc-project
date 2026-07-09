@@ -7,20 +7,25 @@ import (
 	"strings"
 )
 
-func upsertIssue(tx *sql.Tx, ctSlug, mSlug, iSlug, tPath, syncToken string) error {
-	ctID, err := upsertCaseType(tx, ctSlug)
+func upsertIssue(tx *sql.Tx, ip iPath, syncToken string) error {
+	ctID, err := upsertCaseType(tx, ip.ct)
 	if err != nil {
-		return fmt.Errorf("upsert case type %q: %w", ctSlug, err)
+		return fmt.Errorf("upsert case type %q: %w", ip.ct, err)
 	}
 
-	mID, err := upsertMotion(tx, ctID, mSlug)
+	mID, err := upsertMotion(tx, ctID, ip.m)
 	if err != nil {
-		return fmt.Errorf("upsert motion %q: %w", mSlug, err)
+		return fmt.Errorf("upsert motion %q: %w", ip.m, err)
 	}
 
-	err = upsertIssueRow(tx, mID, iSlug, tPath, syncToken)
+	gID, err := upsertGroup(tx, mID, ip.g)
 	if err != nil {
-		return fmt.Errorf("upsert issue row %q: %w", iSlug, err)
+		return fmt.Errorf("upsert group %q: %w", ip.g, err)
+	}
+
+	err = upsertIssueRow(tx, gID, ip.i, ip.path, syncToken)
+	if err != nil {
+		return fmt.Errorf("upsert issue row %q: %w", ip.i, err)
 	}
 
 	return err
@@ -79,19 +84,46 @@ func upsertMotion(tx *sql.Tx, ctID int64, mSlug string) (int64, error) {
 	return res.LastInsertId()
 }
 
-func upsertIssueRow(tx *sql.Tx, mID int64, slug, tPath, syncToken string) error {
+func upsertGroup(tx *sql.Tx, mID int64, gSlug string) (int64, error) {
+	var id int64
+	err := tx.QueryRow(
+		`SELECT id FROM groups
+		WHERE motion_id = ? AND slug = ?`,
+		mID, gSlug,
+	).Scan(&id)
+	if err == nil {
+		return id, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, err
+	}
+
+	res, err := tx.Exec(
+		`INSERT INTO groups
+		(motion_id, slug, name)
+		VALUES (?, ?, ?)`,
+		mID, gSlug, formatName(gSlug),
+	)
+	if err != nil {
+		return 0, err
+	}
+
+	return res.LastInsertId()
+}
+
+func upsertIssueRow(tx *sql.Tx, gID int64, slug, tPath, syncToken string) error {
 	var id int64
 	err := tx.QueryRow(
 		`SELECT id FROM issues
-		WHERE motion_id = ? AND slug = ?`,
-		mID, slug,
+		WHERE group_id = ? AND slug = ?`,
+		gID, slug,
 	).Scan(&id)
 	if errors.Is(err, sql.ErrNoRows) {
 		_, err := tx.Exec(
 			`INSERT INTO issues
-			(motion_id, slug, name, template_path, last_seen)
+			(group_id, slug, name, template_path, last_seen)
 			VALUES (?, ?, ?, ?, ?)`,
-			mID, slug, formatName(slug), tPath, syncToken,
+			gID, slug, formatName(slug), tPath, syncToken,
 		)
 
 		return err
